@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation des pannes HQ - Québec</title>
+
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+
+    <!-- Mapbox Geocoder -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1;
+            min-width: 600px;
+        }
+
+        .week-selector {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .week-selector label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .week-selector select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .time-display {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2563eb;
+        }
+
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        #timeSlider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            background: #e5e7eb;
+            cursor: pointer;
+        }
+
+        #timeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        #timeSlider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            border: none;
+        }
+
+        .playback-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .play-btn {
+            background: #10b981;
+            color: white;
+            min-width: 100px;
+        }
+
+        .play-btn:hover {
+            background: #059669;
+        }
+
+        .play-btn.playing {
+            background: #ef4444;
+        }
+
+        .play-btn.playing:hover {
+            background: #dc2626;
+        }
+
+        .speed-btn {
+            background: #f3f4f6;
+            color: #1f2937;
+            min-width: 60px;
+        }
+
+        .speed-btn.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .speed-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .speed-btn.active:hover {
+            background: #1d4ed8;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px 50px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 2;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="title">
+        Animation des pannes de courant - Québec
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div>Chargement des données...</div>
+    </div>
+
+    <div class="controls" id="controls" style="display: none;">
+        <div class="week-selector">
+            <label>Semaine:</label>
+            <select id="weekSelect" onchange="loadWeekData()">
+                <option value="">Chargement...</option>
+            </select>
+        </div>
+
+        <div class="time-display" id="timeDisplay">--:--:--</div>
+
+        <div class="slider-container">
+            <input type="range" id="timeSlider" min="0" max="100" value="0" oninput="updateTime()">
+        </div>
+
+        <div class="playback-controls">
+            <button class="play-btn" id="playBtn" onclick="togglePlay()">▶ Lecture</button>
+            <button class="speed-btn" data-speed="1" onclick="setSpeed(1)">1x</button>
+            <button class="speed-btn active" data-speed="2" onclick="setSpeed(2)">2x</button>
+            <button class="speed-btn" data-speed="5" onclick="setSpeed(5)">5x</button>
+            <button class="speed-btn" data-speed="10" onclick="setSpeed(10)">10x</button>
+        </div>
+
+        <div class="stats" id="stats">
+            Pannes actives: <span id="activeCount">0</span>
+        </div>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZXZlbHluZWJyaWUiLCJhIjoiY2themE5OGF2MDdxazJybG9oNzUyaXoxNSJ9.njPe2lcTp82DKjDeGkHaQA';
+
+        // Initialize map
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: [-71.2, 46.8],
+            zoom: 6
+        });
+
+        // Add geocoder (address search)
+        map.addControl(
+            new MapboxGeocoder({
+                accessToken: mapboxgl.accessToken,
+                mapboxgl: mapboxgl,
+                countries: 'ca',
+                placeholder: 'Rechercher une adresse...'
+            }),
+            'top-left'
+        );
+
+        // Add navigation controls
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+        // Animation state
+        let weekData = null;
+        let timelineData = [];
+        let currentIndex = 0;
+        let isPlaying = false;
+        let playbackSpeed = 2;
+        let animationInterval = null;
+
+        // Load available weeks
+        fetch('data/weeks.json')
+            .then(r => r.json())
+            .then(weeks => {
+                const select = document.getElementById('weekSelect');
+                select.innerHTML = weeks.map(w =>
+                    `<option value="${w.file}">${w.week_start} - ${w.week_end}</option>`
+                ).join('');
+
+                // Load first week
+                if (weeks.length > 0) {
+                    loadWeekData();
+                }
+            });
+
+        function loadWeekData() {
+            const select = document.getElementById('weekSelect');
+            const weekFile = select.value;
+
+            if (!weekFile) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('controls').style.display = 'none';
+            stopAnimation();
+
+            fetch(`data/${weekFile}`)
+                .then(r => r.json())
+                .then(data => {
+                    weekData = data;
+                    processWeekData();
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('controls').style.display = 'block';
+                    currentIndex = 0;
+                    updateVisualization();
+                })
+                .catch(err => {
+                    console.error('Failed to load week data:', err);
+                    alert('Erreur lors du chargement des données');
+                });
+        }
+
+        function processWeekData() {
+            // Group features by timestamp
+            const byTimestamp = {};
+
+            weekData.features.forEach(feature => {
+                const ts = feature.properties.timestamp;
+                if (!byTimestamp[ts]) {
+                    byTimestamp[ts] = [];
+                }
+                byTimestamp[ts].push(feature);
+            });
+
+            // Create sorted timeline
+            timelineData = Object.keys(byTimestamp)
+                .sort()
+                .map(ts => ({
+                    timestamp: ts,
+                    features: byTimestamp[ts]
+                }));
+
+            const slider = document.getElementById('timeSlider');
+            slider.max = timelineData.length - 1;
+            slider.value = 0;
+        }
+
+        map.on('load', () => {
+            // Add source for outage polygons
+            map.addSource('outages', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: []
+                }
+            });
+
+            // Add layer for outages
+            map.addLayer({
+                id: 'outages-fill',
+                type: 'fill',
+                source: 'outages',
+                paint: {
+                    'fill-color': '#ef4444',
+                    'fill-opacity': 0.6
+                }
+            });
+
+            map.addLayer({
+                id: 'outages-outline',
+                type: 'line',
+                source: 'outages',
+                paint: {
+                    'line-color': '#dc2626',
+                    'line-width': 2
+                }
+            });
+        });
+
+        function updateVisualization() {
+            if (!timelineData.length) return;
+
+            const current = timelineData[currentIndex];
+
+            // Update map
+            map.getSource('outages').setData({
+                type: 'FeatureCollection',
+                features: current.features
+            });
+
+            // Update time display
+            document.getElementById('timeDisplay').textContent = current.timestamp;
+
+            // Update stats
+            document.getElementById('activeCount').textContent = current.features.length;
+        }
+
+        function updateTime() {
+            const slider = document.getElementById('timeSlider');
+            currentIndex = parseInt(slider.value);
+            updateVisualization();
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                stopAnimation();
+            } else {
+                startAnimation();
+            }
+        }
+
+        function startAnimation() {
+            isPlaying = true;
+            const btn = document.getElementById('playBtn');
+            btn.textContent = '⏸ Pause';
+            btn.classList.add('playing');
+
+            const interval = 1000 / playbackSpeed; // milliseconds per frame
+
+            animationInterval = setInterval(() => {
+                currentIndex++;
+                if (currentIndex >= timelineData.length) {
+                    currentIndex = 0;
+                }
+
+                document.getElementById('timeSlider').value = currentIndex;
+                updateVisualization();
+            }, interval);
+        }
+
+        function stopAnimation() {
+            isPlaying = false;
+            const btn = document.getElementById('playBtn');
+            btn.textContent = '▶ Lecture';
+            btn.classList.remove('playing');
+
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+        }
+
+        function setSpeed(speed) {
+            playbackSpeed = speed;
+
+            // Update button states
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.speed) === speed) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Restart animation if playing
+            if (isPlaying) {
+                stopAnimation();
+                startAnimation();
+            }
+        }
+    </script>
+</body>
+</html>
