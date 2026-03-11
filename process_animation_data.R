@@ -47,6 +47,11 @@ list_files <- function() {
       ), stdout = TRUE)
     }
 
+    # Debug: print raw response
+    cat("DEBUG - Raw API response:\n")
+    cat(paste(response, collapse = "\n"), "\n")
+    cat("DEBUG - Response length:", length(response), "\n\n")
+
     response_json <- fromJSON(paste(response, collapse = "\n"))
 
     if (!is.null(response_json$entries)) {
