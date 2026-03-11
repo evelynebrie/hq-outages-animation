@@ -227,8 +227,8 @@
 
     <div class="controls" id="controls" style="display: none;">
         <div class="week-selector">
-            <label>Semaine:</label>
-            <select id="weekSelect" onchange="loadWeekData()">
+            <label>Jour:</label>
+            <select id="daySelect" onchange="loadDayData()">
                 <option value="">Chargement...</option>
             </select>
         </div>
@@ -278,59 +278,59 @@
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
         // Animation state
-        let weekData = null;
+        let dayData = null;
         let timelineData = [];
         let currentIndex = 0;
         let isPlaying = false;
         let playbackSpeed = 2;
         let animationInterval = null;
 
-        // Load available weeks
-        fetch('data/weeks.json')
+        // Load available days
+        fetch('data/days.json')
             .then(r => r.json())
-            .then(weeks => {
-                const select = document.getElementById('weekSelect');
-                select.innerHTML = weeks.map(w =>
-                    `<option value="${w.file}">${w.week_start} - ${w.week_end}</option>`
+            .then(days => {
+                const select = document.getElementById('daySelect');
+                select.innerHTML = days.map(d =>
+                    `<option value="${d.file}">${d.day}</option>`
                 ).join('');
 
-                // Load first week
-                if (weeks.length > 0) {
-                    loadWeekData();
+                // Load first day
+                if (days.length > 0) {
+                    loadDayData();
                 }
             });
 
-        function loadWeekData() {
-            const select = document.getElementById('weekSelect');
-            const weekFile = select.value;
+        function loadDayData() {
+            const select = document.getElementById('daySelect');
+            const dayFile = select.value;
 
-            if (!weekFile) return;
+            if (!dayFile) return;
 
             document.getElementById('loading').style.display = 'block';
             document.getElementById('controls').style.display = 'none';
             stopAnimation();
 
-            fetch(`data/${weekFile}`)
+            fetch(`data/${dayFile}`)
                 .then(r => r.json())
                 .then(data => {
-                    weekData = data;
-                    processWeekData();
+                    dayData = data;
+                    processDayData();
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('controls').style.display = 'block';
                     currentIndex = 0;
                     updateVisualization();
                 })
                 .catch(err => {
-                    console.error('Failed to load week data:', err);
+                    console.error('Failed to load day data:', err);
                     alert('Erreur lors du chargement des données');
                 });
         }
 
-        function processWeekData() {
+        function processDayData() {
             // Group features by timestamp
             const byTimestamp = {};
 
-            weekData.features.forEach(feature => {
+            dayData.features.forEach(feature => {
                 const ts = feature.properties.timestamp;
                 if (!byTimestamp[ts]) {
                     byTimestamp[ts] = [];

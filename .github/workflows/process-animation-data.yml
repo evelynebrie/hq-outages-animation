@@ -3,10 +3,10 @@ name: Process Animation Data
 on:
   workflow_dispatch:
     inputs:
-      weeks_to_process:
-        description: 'Number of recent weeks to process'
+      days_to_process:
+        description: 'Number of recent days to process'
         required: false
-        default: '4'
+        default: '1'
 
 permissions:
   contents: write
@@ -46,7 +46,7 @@ jobs:
       - name: Download and process polygon data
         env:
           DROPBOX_TOKEN: ${{ steps.dropbox_token.outputs.token }}
-          WEEKS_TO_PROCESS: ${{ github.event.inputs.weeks_to_process }}
+          DAYS_TO_PROCESS: ${{ github.event.inputs.days_to_process }}
         run: |
           Rscript process_animation_data.R
 
