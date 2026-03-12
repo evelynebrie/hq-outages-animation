@@ -36,11 +36,18 @@ jobs:
       - name: Get Dropbox Access Token
         id: dropbox_token
         run: |
+          echo "DEBUG: Exchanging refresh token for access token..."
           TOKENS=$(curl -sS -X POST https://api.dropboxapi.com/oauth2/token \
             -d grant_type=refresh_token \
             -d refresh_token="${{ secrets.DROPBOX_REFRESH_TOKEN }}" \
             -u "${{ secrets.DROPBOX_APP_KEY }}:${{ secrets.DROPBOX_APP_SECRET }}")
+          echo "DEBUG: Token response: $TOKENS"
           ACCESS=$(echo "$TOKENS" | jq -r '.access_token')
+          echo "DEBUG: Extracted token length: ${#ACCESS}"
+          if [ "$ACCESS" = "null" ] || [ -z "$ACCESS" ]; then
+            echo "ERROR: Failed to get access token!"
+            exit 1
+          fi
           echo "token=$ACCESS" >> "$GITHUB_OUTPUT"
 
       - name: Download and process polygon data
