@@ -23,6 +23,17 @@ cat(sprintf("Processing last %d day(s) of data\n\n", days_to_process))
 # ==================================================================
 cat("[1] Listing polygon files from Dropbox...\n")
 
+# Debug: List root folder first
+cat("DEBUG: Listing root folder to see what's accessible...\n")
+root_response <- system2("curl", c(
+  "-s", "-X", "POST",
+  "https://api.dropboxapi.com/2/files/list_folder",
+  "-H", sprintf("Authorization: Bearer %s", dropbox_token),
+  "-H", "Content-Type: application/json",
+  "-d", '{"path": "", "recursive": false}'
+), stdout = TRUE)
+cat("Root folder contents:\n", paste(root_response, collapse="\n"), "\n\n")
+
 list_files <- function() {
   all_files <- character()
   has_more <- TRUE
@@ -35,7 +46,7 @@ list_files <- function() {
         "https://api.dropboxapi.com/2/files/list_folder",
         "-H", sprintf("Authorization: Bearer %s", dropbox_token),
         "-H", "Content-Type: application/json",
-        "-d", '{"path": "/hq-outages-uploader-appfolder/hq-outages", "recursive": true}'
+        "-d", '{"path": "/hq-outages", "recursive": true}'
       ), stdout = TRUE)
     } else {
       response <- system2("curl", c(
