@@ -35,7 +35,7 @@ list_files <- function() {
         "https://api.dropboxapi.com/2/files/list_folder",
         "-H", sprintf("Authorization: Bearer %s", dropbox_token),
         "-H", "Content-Type: application/json",
-        "-d", '{"path": "/hq-outages", "recursive": true}'
+        "-d", '{"path": "/hq-outages-uploader-appfolder/hq-outages", "recursive": true}'
       ), stdout = TRUE)
     } else {
       response <- system2("curl", c(
